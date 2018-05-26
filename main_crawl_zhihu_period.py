@@ -254,11 +254,14 @@ def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_fol
     print last_upvote_answer_ids
     success = False
     upvote_sleep_time=3
+    
     while not success:
         try:
-            # scroll down to get enought activities   
+            # scroll down to get enought activities
+            scroll_time = 0   
             last_height = driver.driver.execute_script("return document.body.scrollHeight")
-            while True:
+            while scroll_time < 6: # the page got a problem when scroll the 7th time
+                scroll_time += 1
                 # Scroll down to bottom
                 driver.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
                 # Wait to load page
@@ -758,7 +761,7 @@ if __name__ =="__main__":
         if  (cur_steps) % change_proxy_every == 0:
             driver.change_proxy(new_list=True)
         url=start_urls[i]
-        #url='https://www.zhihu.com/people/richard-xu-25'
+        #url='https://www.zhihu.com/people/huang-xiong-wei-45'
         print(i,url)
         sys.stdout.flush()
         user_id=user_id_dict[url]

@@ -37,7 +37,7 @@ def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_fol
     try_limit=3
     sleep_time_limit=10
     voter_page_limit=10
-    follower_page_limit=100
+    follower_page_limit=30
     followee_page_limit=100
 
     try_current=0

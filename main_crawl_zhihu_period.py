@@ -37,15 +37,15 @@ def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_fol
     try_limit=3
     sleep_time_limit=10
     voter_page_limit=10
-    follower_page_limit=30
-    followee_page_limit=100
+    follower_page_limit=10
+    followee_page_limit=10
 
     try_current=0
     
     while not success:
         try:
             soup = driver.get_soup_until_success(url, save_page=True)
-            if not soup: return None 
+            if not soup: return None # ip blocked
             user_info={}
             
             #basic info   
@@ -53,11 +53,17 @@ def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_fol
                 name=soup.select('span.ProfileHeader-name')[0].text
                 print(name)
                 sys.stdout.flush()
-            else:
+            elif soup.select('title') and soup.select('title')[0].text=='Web Page Blocked':
+            	print 'IP blocked'
+            	return None 
+            elif soup.select('div.Login-content'):
                 user_info['is_blocked']=True
                 print "the user is blocked"
                 sys.stdout.flush()
-                return user_info  
+                return user_info
+            else:
+                print 'access failed: unknown reason'
+                return None
             user_info['is_blocked']=False  
             user_info['user_name']=name
             if len(soup.select('span.RichText.ProfileHeader-headline'))>0:

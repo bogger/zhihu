@@ -53,9 +53,6 @@ def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_fol
                 name=soup.select('span.ProfileHeader-name')[0].text
                 print(name)
                 sys.stdout.flush()
-            elif soup.select('title') and soup.select('title')[0].text=='Web Page Blocked':
-            	print 'IP blocked'
-            	return None 
             elif soup.select('div.Login-content'):
                 user_info['is_blocked']=True
                 print "the user is blocked"

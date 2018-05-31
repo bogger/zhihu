@@ -32,6 +32,12 @@ def get_proxies(output_file, proxy_source, maxtime=500, anno=34):
         for prox in all_proxy_json:
 
             all_proxies[prox['ip'] +':'+ prox['port']] = proxy_dict[prox['type']]
+    elif proxy_source=='plain':
+        all_proxies = {}
+        with open('plain_proxies.txt') as f:
+            for line in f:
+                items = line.strip().split(':')
+                all_proxies[items[0]+':'+items[1]] = "1000"
     else:
         raise Exception("proxy source unknown!")
     return all_proxies

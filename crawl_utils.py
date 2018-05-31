@@ -101,28 +101,26 @@ class soupDriver:
     def save_block_list(self):
         with open(self.ip_block_file_out,'w') as f:
             f.write('\n'.join(self.ip_block_list))
-    def get_proxy(self, new_list=False):
-        
-        
-        if len(self.all_proxies.keys()) < 10 or new_list:
+    def get_proxy(self, new_list=False, delete=False):
+        if delete:
+            self.all_proxies.pop(self.proxy, 0)
+        if len(self.all_proxies.keys()) < 1 or new_list:
             self.all_proxies = get_proxies(self.proxy_file, self.proxy_source)
             for ip in self.ip_block_list:
                 if ip in self.all_proxies:
                     del self.all_proxies[ip]
-        if self.proxy in self.all_proxies:
-            del self.all_proxies[self.proxy]
         self.proxy, proxy_type_str = random.choice(list(self.all_proxies.items()))
         
         print 'use proxy ip', self.proxy, 'proxy type', proxy_type_str
         desired_capability = self.get_desired_capability(self.proxy, proxy_type_str)
         return desired_capability
 
-    def change_proxy(self,new_list=False):
+    def change_proxy(self,new_list=False, delete=False):
         succ = False
         while not succ:
             try:
                 with timeout(seconds=20):
-                    proxy_param = self.get_proxy(new_list=new_list)
+                    proxy_param = self.get_proxy(new_list=new_list, delete=delete)
                     # accept potential alert
                     try:
                             alert = self.driver.switch_to.alert
@@ -159,7 +157,7 @@ class soupDriver:
                 except (selenium.common.exceptions.TimeoutException, selenium.common.exceptions.WebDriverException) as e:
                     print e
                     if USE_PROXY:
-                        self.change_proxy()
+                        self.change_proxy(delete=True)
                     time.sleep(3)
                 else:
                     return page
@@ -246,7 +244,7 @@ class soupDriver:
             print 'put ip into block list', self.proxy
             self.ip_block_list.append(self.proxy)
             self.save_block_list()
-            self.change_proxy()
+            self.change_proxy(delete=True)
             time.sleep(wait_time)
             return None
         else:

@@ -32,12 +32,21 @@ def get_proxies(output_file, proxy_source, maxtime=500, anno=34):
         for prox in all_proxy_json:
 
             all_proxies[prox['ip'] +':'+ prox['port']] = proxy_dict[prox['type']]
+    elif proxy_source=='zhima':
+        web_url='http://webapi.http.zhimacangku.com/getip?num=4&type=1&pro=0&city=0&yys=0&port=11&pack=21928&ts=0&ys=0&cs=0&lb=1&sb=0&pb=4&mr=1&regions='
+        url = "curl '%s' -H 'Pragma: no-cache' -H 'Accept-Encoding: gzip, deflate, sdch' -H 'Connection: keep-alive' --compressed -o %s" % (web_url, output_file)
+        os.system(url)
+        all_proxies = {}
+        with open(output_file) as f:
+            for line in f:
+                ip = line.strip()
+                all_proxies[ip] = "0100"
     elif proxy_source=='plain':
         all_proxies = {}
         with open('plain_proxies.txt') as f:
             for line in f:
                 items = line.strip().split(':')
-                all_proxies[items[0]+':'+items[1]] = "1000"
+                all_proxies[items[0]+':'+items[1]] = "0100"
     else:
         raise Exception("proxy source unknown!")
     return all_proxies
@@ -60,5 +69,7 @@ def update_proxyfile(f1, f2):
     os.system("cat %s >> %s " % (f2,f1))
 
 if __name__ == "__main__":
-    print get_proxies('proxies.txt', 'nord')
+    filename = sys.argv[1]
+    proxy_source = sys.argv[2]
+    print get_proxies(filename, proxy_source)
 

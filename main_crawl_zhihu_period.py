@@ -28,32 +28,31 @@ base_zhihu_url = 'https://www.zhihu.com'
 
  
 def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_followee_list, url=None, driver=None,
-            save_page = True):
+            user_info={}, job_type=0, save_page = True):
 
-    assert url != None
-    assert driver != None
+  assert url != None
+  assert driver != None
+  try_limit=3
+  sleep_time_limit=10
+  voter_page_limit=10
+  follower_page_limit=10
+  followee_page_limit=10
 
+  if job_type == 0: # basic information, activities, followed topics
     success=False
-    try_limit=3
-    sleep_time_limit=10
-    voter_page_limit=10
-    follower_page_limit=10
-    followee_page_limit=10
-
     try_current=0
     
     while not success:
         try:
             soup = driver.get_soup_until_success(url, save_page=True)
             if not soup: return None # ip blocked
-            user_info={}
             
             #basic info   
             if soup.select('span.ProfileHeader-name'):
                 name=soup.select('span.ProfileHeader-name')[0].text
                 print(name)
                 sys.stdout.flush()
-            elif soup.select('div.Login-content'):
+            elif soup.select('div.Login-content') or soup.select('div.error h1.header'): # redirect to login page or 404 error
                 user_info['is_blocked']=True
                 print "the user is blocked"
                 sys.stdout.flush()
@@ -247,7 +246,7 @@ def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_fol
                 print e
                 try_current+=1
                 if try_current>try_limit:
-                    driver.change_proxy()
+                    driver.change_proxy(delete=True)
                     try_current=0
                 time.sleep(1)   
     
@@ -359,12 +358,11 @@ def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_fol
                 print e
                 upvote_sleep_time+=2
                 if upvote_sleep_time>10:
-                    driver.change_proxy()
+                    driver.change_proxy(delete=True)
                     soup = driver.get_soup_until_success(url, save_page=True)
                     if not soup: return None
                     upvote_sleep_time=3
                 time.sleep(1)
-     
     #following topics (top20)
     success = False
     try_current=0
@@ -392,10 +390,11 @@ def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_fol
             print e
             try_current+=1
             if try_current>try_limit:
-                driver.change_proxy()
+                driver.change_proxy(delete=True)
                 try_current=0
             time.sleep(1)
         
+  elif job_type == 1: # new answers 
     
     #new answers since day 0, 2017-12-22, during observation window ; or recent 10 answers
     last_answer_ids=[item['answer_id'] for item in last_answers]
@@ -568,7 +567,7 @@ def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_fol
                     sys.stdout.flush()
                     # voter_sleep_time+=10
                     # if voter_sleep_time>sleep_time_limit:
-                    driver.change_proxy()
+                    driver.change_proxy(delete=True)
                     page_try = 0
                     # voter_sleep_time=3
                     time.sleep(1)
@@ -579,7 +578,7 @@ def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_fol
     else:
         print "the page is gone"        
         
-    
+  elif job_type == 2: # follower and followee 
     #network_detail
     follower_user_ids_last=[item['follower_user_id'] for item in last_follower_list]
     follower_list=last_follower_list
@@ -724,7 +723,7 @@ def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_fol
     #recent followers
     #recent followees
 
-    return user_info
+  return user_info
 
 if __name__ =="__main__":
     period=int(sys.argv[1])
@@ -737,7 +736,6 @@ if __name__ =="__main__":
         proxy_source = 'cloak'
     period_last=period-1
     path_to_last_period='ego_nodes_period'+str(period_last)#+'_'+str(task_id)
-
     f = open("ego_urls_nonorganization.txt")
     start_urls = []
     user_id_dict = {}
@@ -746,22 +744,36 @@ if __name__ =="__main__":
         user_id_dict[item[1]] = item[0]
         start_urls.append(item[1])
     f.close()
+    # job allocation:
+    # 0: basic information, activities, followed topics
+    # 1: answers
+    # 2: followers and followees
+    job_num = 3
     save_path = "ego_nodes_period" +str(period)+"_"+str(task_id)
     todo_ids = []
+    json_files = {}
     for i in range(len(start_urls))[start_id:end_id]:
         url=start_urls[i]
         user_id = user_id_dict[url]
         json_file = glob.glob(save_path+'/*'+user_id+'.json')
         if not json_file:
-            todo_ids.append(i)
+            todo_ids.append((i, 0))
+        else:
+            user_info = json.load(open(json_file[0]))
+            # note the previous results does not have to_do_list
+            if 'to_do_list' in user_info:
+                json_files[i] = json_file[0]
+                if len(user_info['to_do_list']) > 0:
+                    todo_ids.append((i, user_info['to_do_list'][0]))
     driver = crawl_utils.soupDriver(period,task_id, proxy_source = proxy_source)
-    change_proxy_every = 10
+    change_proxy_every = 30
     cur_steps = 0
     while len(todo_ids)>0:
         #i=1
-        i = random.choice(todo_ids)
+        i,j = random.choice(todo_ids)
+        json_file = json_files.get(i, None)
         cur_steps+=1
-        if  (cur_steps) % change_proxy_every == 0:
+        if proxy_source != 'zhima' and  (cur_steps) % change_proxy_every == 0:
             driver.change_proxy(new_list=True)
         url=start_urls[i]
         #url='https://www.zhihu.com/people/huang-xiong-wei-45'
@@ -769,6 +781,12 @@ if __name__ =="__main__":
         sys.stdout.flush()
         user_id=user_id_dict[url]
         json_file_last=glob.glob(path_to_last_period+'/*'+user_id+'.json')[0]
+        if json_file:
+            user_info = json.load(open(json_file))
+            assert j in user_info['to_do_list'], 'job id not in to do list'
+        else:
+            user_info = {}
+            user_info['to_do_list'] = [x for x in range(job_num)]
         #json_file_last=[pos_json for pos_json in os.listdir(path_to_last_period) if pos_json.endswith(user_id+'.json')][0]
         with open(json_file_last) as json_data:
             d_last = json.load(json_data)
@@ -797,17 +815,27 @@ if __name__ =="__main__":
 
 
 
-        user_info=crawl_person_profile(last_upvotes,last_answers,last_follower_list,last_followee_list, url, driver)
+        user_info=crawl_person_profile(last_upvotes,last_answers,last_follower_list,last_followee_list, url, driver, user_info, j)
         if user_info:
             # update todo ids
-            todo_ids.remove(i)
-            current_time_insec=int(calendar.timegm((datetime.now()).timetuple())) #UTC seconds
-            #user_id='000000000000000003'
-            user_info['user_id']=user_id
-            user_info['period']=period
-            user_info['current_time_insec']=current_time_insec
-            user_info['user_url']=url
-            file_name="ego_nodes_period"+str(period)+"_"+str(task_id)+"/"+str(period)+"_"+str(current_time_insec)+"_"+user_id+".json"
+            todo_ids.remove((i,j))
+            if j == 0 and (user_info['is_blocked'] or user_info['set_privacy']):
+                user_info['to_do_list'] = []
+            else:
+                user_info['to_do_list'].remove(j)
+                if len(user_info['to_do_list']) > 0:
+                    todo_ids.append((i, user_info['to_do_list'][0]))
+            if json_file is None:
+                current_time_insec=int(calendar.timegm((datetime.now()).timetuple())) #UTC seconds
+                #user_id='000000000000000003'
+                user_info['user_id']=user_id
+                user_info['period']=period
+                user_info['current_time_insec']=current_time_insec
+                user_info['user_url']=url
+                file_name="ego_nodes_period"+str(period)+"_"+str(task_id)+"/"+str(period)+"_"+str(current_time_insec)+"_"+user_id+".json"
+                json_files[i] = file_name
+            else:
+                file_name = json_file
             print file_name
             with io.open(file_name,"w",encoding="utf-8") as outfile:
                 outfile.write(unicode(json.dumps(user_info, outfile, ensure_ascii=False)))

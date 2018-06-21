@@ -57,6 +57,11 @@ def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_fol
                 print "the user is blocked"
                 sys.stdout.flush()
                 return user_info
+            elif soup.title.text == u'知乎 - 发现更大的世界':
+                user_info['is_blocked'] = True
+                print "the user is deleted"
+                sys.stdout.flush()
+                return user_info
             else:
                 print 'access failed: unknown reason'
                 return None

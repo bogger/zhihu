@@ -193,7 +193,7 @@ class soupDriver:
         soup = BeautifulSoup(page,'lxml')
         #title = soup.find('form',{'name':'captcha_form'})
         #blocked IP
-        if (soup.title and (soup.title.text==u"安全验证" or u'Error 400' in soup.title.text)) or (soup.select('title') and soup.select('title')[0].text=='Web Page Blocked'):
+        if (soup.title and (u"安全验证" in soup.title.text or u'Error 400' in soup.title.text)) or (soup.select('title') and soup.select('title')[0].text=='Web Page Blocked'):
             return None, False
         else:
             return soup, True

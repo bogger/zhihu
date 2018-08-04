@@ -2,7 +2,9 @@ import os
 import logging
 import sys
 import json
+import time
 import csv
+import random
 logger = logging.getLogger(__name__)
 proxy_dict = {"HTTP": "1000", "HTTPS":"0100", "SOCKS4":"0010", "SOCKS5":"0001"}
 def get_proxies(output_file, proxy_source, maxtime=500, anno=34):
@@ -12,7 +14,7 @@ def get_proxies(output_file, proxy_source, maxtime=500, anno=34):
     """
     #mycode = "185613621911033" 
     if proxy_source == 'cloak':
-        mycode = "144368111202493"
+        mycode = "404080489138141"
         url =  "curl 'https://hidemy.name/api/proxylist.txt?maxtime=%d&anno=%d&out=csv&code=%s' -H 'Pragma: no-cache' -H 'Accept-Encoding: gzip, deflate, sdch' -H 'Connection: keep-alive' --compressed -o %s" % (maxtime, anno, mycode, output_file) 
         os.system(url)
         all_proxies = {}
@@ -23,7 +25,7 @@ def get_proxies(output_file, proxy_source, maxtime=500, anno=34):
                 proc_type = ''.join(row[-4:])
                 all_proxies[row[1]+':'+row[2]] = proc_type
     elif proxy_source=='nord':
-        web_url = 'https://nordvpn.com/wp-admin/admin-ajax.php?searchParameters%5B0%5D%5Bname%5D=proxy-country&searchParameters%5B0%5D%5Bvalue%5D=united+states&searchParameters%5B1%5D%5Bname%5D=proxy-ports&searchParameters%5B1%5D%5Bvalue%5D=&searchParameters%5B2%5D%5Bname%5D=http&searchParameters%5B2%5D%5Bvalue%5D=on&searchParameters%5B3%5D%5Bname%5D=https&searchParameters%5B3%5D%5Bvalue%5D=on&searchParameters%5B4%5D%5Bname%5D=socks4&searchParameters%5B4%5D%5Bvalue%5D=on&searchParameters%5B5%5D%5Bname%5D=socks5&searchParameters%5B5%5D%5Bvalue%5D=on&offset=0&limit=200&action=getProxies'
+        web_url = 'https://nordvpn.com/wp-admin/admin-ajax.php?searchParameters%5B0%5D%5Bname%5D=proxy-country&searchParameters%5B0%5D%5Bvalue%5D=china&searchParameters%5B1%5D%5Bname%5D=proxy-ports&searchParameters%5B1%5D%5Bvalue%5D=&searchParameters%5B2%5D%5Bname%5D=http&searchParameters%5B2%5D%5Bvalue%5D=on&searchParameters%5B3%5D%5Bname%5D=https&searchParameters%5B3%5D%5Bvalue%5D=on&searchParameters%5B4%5D%5Bname%5D=socks4&searchParameters%5B4%5D%5Bvalue%5D=on&searchParameters%5B5%5D%5Bname%5D=socks5&searchParameters%5B5%5D%5Bvalue%5D=on&offset=0&limit=200&action=getProxies'
         url = "curl '%s' -H 'Pragma: no-cache' -H 'Accept-Encoding: gzip, deflate, sdch' -H 'Connection: keep-alive' --compressed -o %s" % (web_url, output_file)
 
         os.system(url)
@@ -33,14 +35,32 @@ def get_proxies(output_file, proxy_source, maxtime=500, anno=34):
 
             all_proxies[prox['ip'] +':'+ prox['port']] = proxy_dict[prox['type']]
     elif proxy_source=='zhima':
-        web_url='http://webapi.http.zhimacangku.com/getip?num=4&type=1&pro=0&city=0&yys=0&port=11&pack=21928&ts=0&ys=0&cs=0&lb=1&sb=0&pb=4&mr=1&regions='
-        url = "curl '%s' -H 'Pragma: no-cache' -H 'Accept-Encoding: gzip, deflate, sdch' -H 'Connection: keep-alive' --compressed -o %s" % (web_url, output_file)
-        os.system(url)
-        all_proxies = {}
-        with open(output_file) as f:
-            for line in f:
-                ip = line.strip()
-                all_proxies[ip] = "0100"
+        succ = False
+        use_pack = True
+        while not succ:
+            if use_pack:
+
+                web_url='http://webapi.http.zhimacangku.com/getip?num=4&type=1&pro=0&city=0&yys=0&port=11&pack=21928&ts=0&ys=0&cs=0&lb=1&sb=0&pb=4&mr=1&regions='
+            else:
+                web_url='http://webapi.http.zhimacangku.com/getip?num=4&type=1&pro=0&city=0&yys=0&port=11&time=2&ts=0&ys=0&cs=0&lb=1&sb=0&pb=4&mr=1&regions='
+            url = "curl '%s' -H 'Pragma: no-cache' -H 'Accept-Encoding: gzip, deflate, sdch' -H 'Connection: keep-alive' --compressed -o %s" % (web_url, output_file)
+            os.system(url)
+            all_proxies = {}
+            invalid_ip = False
+            with open(output_file) as f:
+                for line in f:
+                    ip = line.strip()
+                    ip_sp = ip.split(':')
+                    if len(ip_sp) != 2:
+                        invalid_ip = True
+                        break
+                    all_proxies[ip] = "0100"
+            if invalid_ip: 
+                time.sleep(random.randint(5, 10))
+                use_pack = False
+                continue
+            else:
+                succ=True
     elif proxy_source=='plain':
         all_proxies = {}
         with open('plain_proxies.txt') as f:

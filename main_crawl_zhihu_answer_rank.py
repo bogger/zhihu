@@ -34,7 +34,7 @@ def crawl_answer_rank(answer_id, question_id, driver=None, save_page = True):
     if not soup: return None
     question_info={}
     question_info['question_id']=question_id
-    if not soup.find('meta', {'itemprop':'name'}):
+    if not soup.find('meta', {'itemprop':'name'}) or not soup.find('meta', {'itemprop':'keywords'}):
         return {'answer_id':answer_id,'answer_rank':'', 'answer_meta': {}, 'question_info':'unavailable'}
     question_info['title']=soup.find('meta', {'itemprop':'name'})['content']
     question_info['key_words']=soup.find('meta', {'itemprop':'keywords'})['content']

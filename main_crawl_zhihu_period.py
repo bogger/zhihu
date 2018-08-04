@@ -567,7 +567,7 @@ def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_fol
                             curr_answer_id+=1
                     if not(answer_list is None and answer_n > 0): 
                         success = True
-                except (IndexError, KeyError, selenium.common.exceptions.NoSuchElementException, selenium.common.exceptions.ElementNotInteractableException, selenium.common.exceptions.ElementClickInterceptedException) as e:
+                except (IndexError, KeyError, selenium.common.exceptions.TimeoutException, selenium.common.exceptions.NoSuchElementException, selenium.common.exceptions.ElementNotInteractableException, selenium.common.exceptions.ElementClickInterceptedException, selenium.common.exceptions.StaleElementReferenceException) as e:
                     print e
                     sys.stdout.flush()
                     # voter_sleep_time+=10

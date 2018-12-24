@@ -140,7 +140,7 @@ class soupDriver:
                     print 'started'
                     sys.stdout.flush()
                     succ = True
-            except (RuntimeError,selenium.common.exceptions.WebDriverException) as e:
+            except (RuntimeError,socket.error, selenium.common.exceptions.WebDriverException) as e:
                 print e
 
     def try_connect(self, url, use_driver=True, timeout = 20):
@@ -173,10 +173,13 @@ class soupDriver:
                 else:
                     return page    
     def save_page(self, filename):
-        page = self.driver.page_source
+        try:
+            page = self.driver.page_source
 
-        with io.open(os.path.join(self.save_folder, filename),'w', encoding='utf-8') as f:
-           f.write(page)
+            with io.open(os.path.join(self.save_folder, filename),'w', encoding='utf-8') as f:
+                f.write(page)
+        except selenium.common.exceptions.WebDriverException as e:
+            print e
     def get_filename(self):
         return self.url[22:].replace('/', '<>')
     def get_soup(self, url, use_driver=True, save_page=True):

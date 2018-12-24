@@ -158,18 +158,29 @@ def crawl_answer_rank(answer_id, question_id, driver=None, save_page = True):
 
 if __name__ =="__main__":  
     period=int(sys.argv[1])
-    if len(sys.argv) > 2:
-        proxy_source = sys.argv[2]
+    task_id = int(sys.argv[2])
+    start_id = int(sys.argv[3])
+    end_id = int(sys.argv[4])
+    if len(sys.argv) > 5:
+        proxy_source = sys.argv[5]
     else:
         proxy_source = 'cloak'
     #num_engine_ego=1
     #base_url='/Users/mengxia_zhang/Dropbox/Lan_Mengxia/project_quora_zhihu/zhihu/scrape_weekly_data_without_api/'
+    f = open("ego_urls_nonorganization.txt")
+    user_ids = []
+    for x in f.readlines():
+        item = x.strip().split()
+        user_ids.append(item[0])
+    f.close()
+    user_ids = user_ids[start_id:end_id]
     base_url = './'
-    driver = crawl_utils.soupDriver(period, 0, proxy_source = proxy_source, 
+    driver = crawl_utils.soupDriver(period, task_id, proxy_source = proxy_source, 
             save_folder='html_answer_rank_period_%d')
     path_to_json = base_url+'ego_nodes_period'+str(period)#+'_'+str(engine)
     json_files_ego=[pos_json for pos_json in os.listdir(path_to_json) if pos_json.endswith('.json')]
     print len(json_files_ego), 'nodes in total'
+
     save_path = "ranks_of_answers_in_period"+str(period)
     todo_user_id_answer_ids = []
     for json_file in json_files_ego:
@@ -177,6 +188,7 @@ if __name__ =="__main__":
             d = json.load(json_data)         
             if 'new_answers' in d:
                 user_id=d['user_id']
+                if user_id not in user_ids: continue
                 new_answers=d['new_answers']
                 for answer in new_answers:
                     answer_id=answer['answer_id']
@@ -186,6 +198,7 @@ if __name__ =="__main__":
                     
                     if not os.path.exists(file_name):
                         todo_user_id_answer_ids.append((user_id, answer_id, question_id))
+    print 'number of answers to crawl', len(todo_user_id_answer_ids)
     change_proxy_every = 100
     curr_steps = 0
     while len(todo_user_id_answer_ids) > 0:

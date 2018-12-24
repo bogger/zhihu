@@ -28,7 +28,7 @@ base_zhihu_url = 'https://www.zhihu.com'
 
  
 def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_followee_list, url=None, driver=None,
-            user_info={}, job_type=0, save_page = True):
+            user_info={}, job_type=0, save_page = True, is_last=False):
 
   assert url != None
   assert driver != None
@@ -57,7 +57,8 @@ def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_fol
                 print "the user is blocked"
                 sys.stdout.flush()
                 return user_info
-            elif soup.title.text == u'知乎 - 发现更大的世界':
+            elif soup.title.text == u'知乎 - 发现更大的世界' or  \
+                    soup.title.text == u'知乎 - 有问题上知乎':
                 user_info['is_blocked'] = True
                 print "the user is deleted"
                 sys.stdout.flush()
@@ -601,6 +602,7 @@ def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_fol
         last_follower_reached=False #follower list in last period
         for i in range(min(num_total_pages,follower_page_limit)): #np.nanpercentile(d_df0_notorg.follower_count,96)=2007 
             success = False
+            try_num = 0
             while not success:
                 try:
                     print('follower_page',i) 
@@ -612,7 +614,11 @@ def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_fol
                     followers=soup_followers.find('div',{'id':'Profile-following'}).select('div.List-item')   
                     print('#follower',len(followers))
                     sys.stdout.flush()
-                    for follower in followers:
+                    for j, follower in enumerate(followers):
+                        if j == len(followers) - 1 and follower.find('div',{'class','ContentItem'}) == None:
+                            print 'error loading the last one'
+                            sys.stdout.flush()
+                            break
                         meta=follower.find('div',{'class','ContentItem'})['data-za-extra-module']
                         meta_dict=json.loads(meta)
                         follower_user_id=meta_dict['card']['content']['member_hash_id']
@@ -643,9 +649,17 @@ def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_fol
                                 'follower_badge':{follower_badge:badge_info},\
                                 'follower_follower_num':follower_follower_num,'follower_intro':follower_intro,'follower_status':follower_status}]+follower_list
                     success = True
-                except (KeyError,AttributeError) as e:
+                except (KeyError,AttributeError, IndexError) as e:
                     print e
                     sys.stdout.flush()
+                    try_num +=1
+                    if try_num == 2:
+                        if not is_last:
+                            return None
+                        else:
+                            last_follower_reached = True
+                            break
+                    
                     driver.change_proxy()
                     time.sleep(1)
             if last_follower_reached:
@@ -671,6 +685,7 @@ def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_fol
         last_followee_reached=False
         for i in range(min(num_total_pages,followee_page_limit)): 
             success = False
+            try_num = 0
             while not success:
                 try:
                     print('followee_page',i)           
@@ -681,7 +696,11 @@ def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_fol
                     followees=soup_followees.find('div',{'id':'Profile-following'}).select('div.List-item')   
                     print('#followee',len(followees))
                     sys.stdout.flush()
-                    for followee in followees:
+                    for j ,followee in enumerate(followees):
+                        if j == len(followees) - 1 and followee.find('div',{'class','ContentItem'}) == None:
+                            print 'error loading the last one'
+                            sys.stdout.flush()
+                            break
                         meta=followee.find('div',{'class','ContentItem'})['data-za-extra-module']
                         meta_dict=json.loads(meta)
                         followee_user_id=meta_dict['card']['content']['member_hash_id']
@@ -710,9 +729,16 @@ def crawl_person_profile(last_upvotes, last_answers, last_follower_list,last_fol
                                 'followee_badge':{followee_badge:badge_info},\
                                 'followee_follower_num':followee_follower_num,'followee_intro':followee_intro,'followee_status':followee_status}]+followee_list
                     success = True 
-                except (KeyError,AttributeError) as e:
+                except (KeyError,AttributeError, IndexError) as e:
                     print e
                     sys.stdout.flush()
+                    try_num +=1
+                    if try_num ==2:
+                        if not is_last:
+                            return None
+                        else:
+                            last_followee_reached = True
+                            break
                     driver.change_proxy()
                     time.sleep(1)
             if last_followee_reached:
@@ -819,8 +845,8 @@ if __name__ =="__main__":
             
 
 
-
-        user_info=crawl_person_profile(last_upvotes,last_answers,last_follower_list,last_followee_list, url, driver, user_info, j)
+        is_last = len(todo_ids) <= 5 # should be larger than 2 in case multiple pages have problem
+        user_info=crawl_person_profile(last_upvotes,last_answers,last_follower_list,last_followee_list, url, driver, user_info, j, is_last=is_last)
         if user_info:
             # update todo ids
             todo_ids.remove((i,j))
